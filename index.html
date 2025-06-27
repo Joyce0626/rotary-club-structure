@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>扶輪社組織結構</title>
+    <title>扶輪社組織結構 - 方案二</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -549,6 +549,7 @@
                     層級: levels
                 });
 
+                // 建構完整的層級路徑
                 let current = tree;
                 levels.forEach((level, index) => {
                     if (!current[level]) {
@@ -559,20 +560,17 @@
                             people: []
                         };
                     }
-                    current = current[level].children;
-                });
-
-                // 找到最終節點並加入人員
-                let finalNode = tree;
-                levels.forEach(level => {
-                    if (finalNode[level]) {
-                        finalNode = finalNode[level];
+                    current = current[level];
+                    
+                    // 如果不是最後一層，移動到children
+                    if (index < levels.length - 1) {
+                        current = current.children;
                     }
                 });
-                
-                // 安全地加入人員資料
-                if (finalNode && finalNode.people) {
-                    finalNode.people.push({
+
+                // 在最後一層加入人員
+                if (current && current.people) {
+                    current.people.push({
                         name: row['姓名'] || row.姓名 || '未知',
                         url: row['個人頁面'] || row.個人頁面 || '',
                         type: row['類型'] || row.類型 || '未知'
