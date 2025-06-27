@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>扶輪社組織結構 - 方案二</title>
+    <title>扶輪社組織結構</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -448,6 +448,11 @@
                     return type === '社員' || type === '社员' || type === '會員' || type === '会员';
                 });
 
+                console.log('分類結果:', {
+                    講師資料: instructorData.slice(0, 2), // 顯示前2筆
+                    社員資料: memberData.slice(0, 2)     // 顯示前2筆
+                });
+
                 console.log('載入資料:', {
                     總計: organizationData.length,
                     講師: instructorData.length,
@@ -529,13 +534,20 @@
             const tree = {};
             
             data.forEach(row => {
+                // 安全地取得層級資料
                 const levels = [
-                    row.層級1,
-                    row.層級2,
-                    row.層級3,
-                    row.層級4,
-                    row.層級5
+                    row['層級1'] || row.層級1 || '',
+                    row['層級2'] || row.層級2 || '',
+                    row['層級3'] || row.層級3 || '',
+                    row['層級4'] || row.層級4 || '',
+                    row['層級5'] || row.層級5 || ''
                 ].filter(level => level && level.trim());
+
+                console.log('處理資料:', {
+                    姓名: row['姓名'] || row.姓名,
+                    類型: row['類型'] || row.類型,
+                    層級: levels
+                });
 
                 let current = tree;
                 levels.forEach((level, index) => {
@@ -553,16 +565,22 @@
                 // 找到最終節點並加入人員
                 let finalNode = tree;
                 levels.forEach(level => {
-                    finalNode = finalNode[level];
+                    if (finalNode[level]) {
+                        finalNode = finalNode[level];
+                    }
                 });
                 
-                finalNode.people.push({
-                    name: row.姓名,
-                    url: row.個人頁面,
-                    type: row.類型
-                });
+                // 安全地加入人員資料
+                if (finalNode && finalNode.people) {
+                    finalNode.people.push({
+                        name: row['姓名'] || row.姓名 || '未知',
+                        url: row['個人頁面'] || row.個人頁面 || '',
+                        type: row['類型'] || row.類型 || '未知'
+                    });
+                }
             });
 
+            console.log('建構的樹狀結構:', tree);
             return tree;
         }
 
