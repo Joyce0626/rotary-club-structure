@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>扶輪社組織結構 - 方案二</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Noto+Sans+TC:wght@300;400;500;700&display=swap');
+        
+        body {
+            font-family: 'Noto Sans TC', 'Poppins', sans-serif;
+            background-color: #f0f4f8;
+        }
+        
+        .tree-node {
+            transition: all 0.3s ease;
+        }
+        
+        .tree-content {
+            transition: all 0.3s ease;
+            position: relative;
+        }
+        
+        .tree-content::before {
+            content: '';
+            position: absolute;
+            left: 10px;
+            top: 0;
+            height: 100%;
+            border-left: 1px dashed #cbd5e1;
+        }
+        
+        .highlight {
+            background-color: rgba(59, 130, 246, 0.15);
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5);
+        }
+        
+        .tree-toggle {
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+        }
+        
+        .tree-toggle:hover {
+            background-color: rgba(59, 130, 246, 0.1);
+        }
+        
+        .member-item {
+            cursor: pointer;
+            transition: all 0.2s ease;
+            position: relative;
+        }
+        
+        .member-item::before {
+            content: '';
+            position: absolute;
+            left: -16px;
+            top: 50%;
+            width: 10px;
+            height: 1px;
+            background-color: #cbd5e1;
+        }
+        
+        .member-item:hover {
+            transform: translateX(3px);
+        }
+        
+        .node-label {
+            position: relative;
+            z-index: 1;
+        }
+        
+        /* 講師群專用樣式 - 紫色系 */
+        .instructor-level-1 {
+            background: linear-gradient(135deg, #7c3aed 0%, #a855f7 100%);
+            color: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+        
+        .instructor-level-2 {
+            background: linear-gradient(135deg, #8b5cf6 0%, #c084fc 100%);
+            color: white;
+            border-radius: 6px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+        
+        .instructor-level-3 {
+            background-color: #f3e8ff;
+            color: #7c3aed;
+            border-radius: 6px;
+        }
+        
+        /* 扶輪社組織樣式 - 藍色系 */
+        .level-1 {
+            background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
+            color: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+        
+        .level-2 {
+            background: linear-gradient(135deg, #0369a1 0%, #38bdf8 100%);
+            color: white;
+            border-radius: 6px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+        
+        .level-3 {
+            background-color: #dbeafe;
+            color: #1e40af;
+            border-radius: 6px;
+        }
+        
+        .level-4 {
+            background-color: #e0f2fe;
+            color: #0369a1;
+            border-radius: 4px;
+        }
+        
+        .level-5 {
+            background-color: #f0f9ff;
+            color: #0284c7;
+            border-radius: 4px;
+        }
+        
+        .section-divider {
+            border-top: 3px solid #e5e7eb;
+            margin: 2rem 0;
+            position: relative;
+        }
+        
+        .section-divider::before {
+            content: '';
+            position: absolute;
+            top: -2px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 60px;
+            height: 4px;
+            background: linear-gradient(90deg, #7c3aed, #3b82f6);
+            border-radius: 2px;
+        }
+        
+        .section-title {
+            display: inline-flex;
+            align-items: center;
+            background: white;
+            padding: 0.5rem 1rem;
+            border-radius: 9999px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            margin-bottom: 1rem;
+            font-weight: 600;
+            color: #374151;
+        }
+        
+        .instructor-section {
+            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        
+        .rotary-section {
+            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 1.5rem;
+        }
+
+        /* 載入狀態 */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #3b82f6;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .status-message {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 12px 20px;
+            border-radius: 8px;
+            color: white;
+            font-weight: 500;
+            z-index: 1000;
+            opacity: 0;
+            transform: translateX(100%);
+            transition: all 0.3s ease;
+        }
+
+        .status-message.show {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        .status-success {
+            background-color: #10b981;
+        }
+
+        .status-error {
+            background-color: #ef4444;
+        }
+    </style>
+</head>
+<body>
+    <!-- 載入覆蓋層 -->
+    <div id="loadingOverlay" class="loading-overlay" style="display: none;">
+        <div class="bg-white p-8 rounded-lg shadow-lg text-center">
+            <div class="loading-spinner mx-auto mb-4"></div>
+            <p class="text-gray-700">正在載入組織資料...</p>
+        </div>
+    </div>
+
+    <!-- 狀態訊息 -->
+    <div id="statusMessage" class="status-message"></div>
+
+    <div class="min-h-screen bg-gradient-to-br from-blue-50 via-white to-sky-50">
+        <header class="bg-blue-700 text-white shadow-md">
+            <div class="container mx-auto px-4 py-5">
+                <div class="flex flex-col md:flex-row justify-between items-center">
+                    <div class="flex items-center mb-4 md:mb-0">
+                        <div class="mr-3">
+                            <svg class="w-10 h-10 text-white" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z" stroke="currentColor" stroke-width="2"/>
+                                <path d="M12 15C13.6569 15 15 13.6569 15 12C15 10.3431 13.6569 9 12 9C10.3431 9 9 10.3431 9 12C9 13.6569 10.3431 15 12 15Z" stroke="currentColor" stroke-width="2"/>
+                                <path d="M12 9V7M12 17V15M9 12H7M17 12H15" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <h1 class="text-2xl font-bold text-white">扶輪社組織結構</h1>
+                            <p class="text-sm text-blue-100">講師群與組織層級查詢系統</p>
+                        </div>
+                    </div>
+                    <div class="w-full md:w-auto">
+                        <div class="relative">
+                            <input type="text" id="search" placeholder="搜尋講師或社員..." class="w-full md:w-64 px-4 py-2 pl-10 rounded-full border border-blue-300 focus:outline-none focus:border-blue-500 text-gray-700">
+                            <span class="absolute left-3 top-2.5 text-blue-500">
+                                <i class="fas fa-search"></i>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <div class="container mx-auto px-4 py-8">
+            <div class="bg-white rounded-xl shadow-lg p-6 mb-8">
+                <div class="flex flex-wrap justify-between items-center mb-6 border-b border-gray-100 pb-4">
+                    <h2 class="text-xl font-bold text-gray-800 flex items-center">
+                        <i class="fas fa-sitemap text-blue-500 mr-2"></i>
+                        組織層級結構
+                    </h2>
+                    <div class="flex space-x-3 mt-2 sm:mt-0">
+                        <button id="refreshData" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md flex items-center transition-colors">
+                            <i class="fas fa-sync-alt mr-2"></i>重新載入
+                        </button>
+                        <button id="expandAll" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md flex items-center transition-colors">
+                            <i class="fas fa-expand-alt mr-2"></i>全部展開
+                        </button>
+                        <button id="collapseAll" class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-md flex items-center transition-colors">
+                            <i class="fas fa-compress-alt mr-2"></i>全部收縮
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 講師群組織區塊 -->
+                <div class="instructor-section">
+                    <div class="section-title">
+                        <i class="fas fa-chalkboard-teacher text-purple-600 mr-2"></i>
+                        <span class="text-purple-800">講師群組織</span>
+                        <span id="instructorCount" class="ml-2 text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded-full">載入中...</span>
+                    </div>
+                    
+                    <div id="instructorContainer" class="pl-2">
+                        <div class="text-center text-gray-500 py-8">
+                            <i class="fas fa-spinner fa-spin text-2xl mb-2"></i>
+                            <p>正在載入講師資料...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 分隔線 -->
+                <div class="section-divider"></div>
+
+                <!-- 扶輪社組織區塊 -->
+                <div class="rotary-section">
+                    <div class="section-title">
+                        <i class="fas fa-users text-blue-600 mr-2"></i>
+                        <span class="text-blue-800">扶輪社組織</span>
+                        <span id="memberCount" class="ml-2 text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full">載入中...</span>
+                    </div>
+                    
+                    <div id="rotaryContainer" class="pl-2">
+                        <div class="text-center text-gray-500 py-8">
+                            <i class="fas fa-spinner fa-spin text-2xl mb-2"></i>
+                            <p>正在載入社員資料...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <footer class="bg-blue-800 text-white py-6 mt-12">
+            <div class="container mx-auto px-4 text-center">
+                <p class="text-lg font-medium">扶輪社組織結構管理系統</p>
+                <p class="text-sm text-blue-200 mt-1">© 2023 版權所有</p>
+            </div>
+        </footer>
+    </div>
+
+    <script>
+        // CSV 資料網址
+        const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQPscDMOlCgMEnTFJzycW9NzRWq7WxNjykJr7iPpNX1Go9AJ1Ah0EaMLkEFnYlkjfEEpSyv9wCSqtuj/pub?gid=485450145&single=true&output=csv';
+        
+        let organizationData = [];
+        let instructorData = [];
+        let memberData = [];
+
+        // 顯示狀態訊息
+        function showStatus(message, type = 'success') {
+            const statusEl = document.getElementById('statusMessage');
+            statusEl.textContent = message;
+            statusEl.className = `status-message status-${type} show`;
+            
+            setTimeout(() => {
+                statusEl.classList.remove('show');
+            }, 3000);
+        }
+
+        // 顯示載入覆蓋層
+        function showLoading() {
+            document.getElementById('loadingOverlay').style.display = 'flex';
+        }
+
+        // 隱藏載入覆蓋層
+        function hideLoading() {
+            document.getElementById('loadingOverlay').style.display = 'none';
+        }
+
+        // 載入CSV資料
+        async function loadOrganizationData() {
+            showLoading();
+            try {
+                const response = await fetch(CSV_URL);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const csvText = await response.text();
+                
+                // 解析 CSV
+                const parsed = Papa.parse(csvText, {
+                    header: true,
+                    skipEmptyLines: true,
+                    delimiter: ','
+                });
+
+                if (parsed.errors.length > 0) {
+                    console.warn('CSV 解析警告:', parsed.errors);
+                }
+
+                organizationData = parsed.data.filter(row => row.類型 && row.姓名);
+                
+                // 分類資料
+                instructorData = organizationData.filter(row => row.類型 === '講師');
+                memberData = organizationData.filter(row => row.類型 === '社員');
+
+                console.log('載入資料:', {
+                    總計: organizationData.length,
+                    講師: instructorData.length,
+                    社員: memberData.length
+                });
+
+                // 建構組織樹
+                buildInstructorTree();
+                buildMemberTree();
+                updateCounts();
+                
+                showStatus(`成功載入 ${organizationData.length} 筆資料`);
+                
+            } catch (error) {
+                console.error('載入資料失敗:', error);
+                showStatus(`載入失敗: ${error.message}`, 'error');
+                
+                // 顯示錯誤狀態
+                document.getElementById('instructorContainer').innerHTML = `
+                    <div class="text-center text-red-500 py-8">
+                        <i class="fas fa-exclamation-triangle text-2xl mb-2"></i>
+                        <p>載入講師資料失敗</p>
+                        <button onclick="loadOrganizationData()" class="mt-2 bg-red-500 text-white px-4 py-2 rounded-md">重試</button>
+                    </div>
+                `;
+                
+                document.getElementById('rotaryContainer').innerHTML = `
+                    <div class="text-center text-red-500 py-8">
+                        <i class="fas fa-exclamation-triangle text-2xl mb-2"></i>
+                        <p>載入社員資料失敗</p>
+                        <button onclick="loadOrganizationData()" class="mt-2 bg-red-500 text-white px-4 py-2 rounded-md">重試</button>
+                    </div>
+                `;
+            } finally {
+                hideLoading();
+            }
+        }
+
+        // 建構講師樹狀結構
+        function buildInstructorTree() {
+            const container = document.getElementById('instructorContainer');
+            
+            if (instructorData.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center text-gray-500 py-4">
+                        <i class="fas fa-info-circle mr-2"></i>
+                        目前沒有講師資料
+                    </div>
+                `;
+                return;
+            }
+
+            // 建構講師樹狀結構
+            const tree = buildTree(instructorData);
+            container.innerHTML = renderTree(tree, 'instructor');
+        }
+
+        // 建構社員樹狀結構
+        function buildMemberTree() {
+            const container = document.getElementById('rotaryContainer');
+            
+            if (memberData.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center text-gray-500 py-4">
+                        <i class="fas fa-info-circle mr-2"></i>
+                        目前沒有社員資料
+                    </div>
+                `;
+                return;
+            }
+
+            // 建構社員樹狀結構
+            const tree = buildTree(memberData);
+            container.innerHTML = renderTree(tree, 'member');
+        }
+
+        // 建構樹狀資料結構
+        function buildTree(data) {
+            const tree = {};
+            
+            data.forEach(row => {
+                const levels = [
+                    row.層級1,
+                    row.層級2,
+                    row.層級3,
+                    row.層級4,
+                    row.層級5
+                ].filter(level => level && level.trim());
+
+                let current = tree;
+                levels.forEach((level, index) => {
+                    if (!current[level]) {
+                        current[level] = {
+                            name: level,
+                            level: index + 1,
+                            children: {},
+                            people: []
+                        };
+                    }
+                    current = current[level].children;
+                });
+
+                // 找到最終節點並加入人員
+                let finalNode = tree;
+                levels.forEach(level => {
+                    finalNode = finalNode[level];
+                });
+                
+                finalNode.people.push({
+                    name: row.姓名,
+                    url: row.個人頁面,
+                    type: row.類型
+                });
+            });
+
+            return tree;
+        }
+
+        // 渲染樹狀結構
+        function renderTree(tree, type) {
+            let html = '';
+            
+            Object.values(tree).forEach(node => {
+                html += renderNode(node, type, 1);
+            });
+            
+            return html;
+        }
+
+        // 渲染單一節點
+        function renderNode(node, type, level) {
+            const hasChildren = Object.keys(node.children).length > 0;
+            const hasPeople = node.people.length > 0;
+            const styleClass = type === 'instructor' ? `instructor-level-${Math.min(level, 3)}` : `level-${Math.min(level, 5)}`;
+            
+            let html = `
+                <div class="tree-node mb-${Math.max(4 - level, 1)}">
+                    <div class="flex items-center cursor-pointer ${styleClass} p-${Math.max(3 - level, 1)}">
+                        <span class="tree-toggle mr-2 ${level <= 2 ? 'text-white bg-white bg-opacity-20' : ''}">
+                            <i class="fas fa-plus-square"></i>
+                        </span>
+                        <span class="font-medium node-label">${node.name}</span>
+                        ${hasPeople ? `<span class="ml-2 text-xs bg-white bg-opacity-20 px-2 py-1 rounded-full">${node.people.length}人</span>` : ''}
+                    </div>
+                    <div class="tree-content hidden pl-${Math.min(8 - level, 6)} mt-2">
+            `;
+
+            // 渲染人員
+            if (hasPeople) {
+                node.people.forEach(person => {
+                    const iconClass = type === 'instructor' ? 'fas fa-graduation-cap' : 'fas fa-user';
+                    const bgColor = type === 'instructor' ? 'bg-purple-100' : 'bg-blue-100';
+                    const textColor = type === 'instructor' ? 'text-purple-600' : 'text-blue-600';
+                    const hoverColor = type === 'instructor' ? 'hover:bg-purple-50' : 'hover:bg-blue-50';
+                    const linkColor = type === 'instructor' ? 'text-purple-400' : 'text-blue-400';
+                    
+                    html += `
+                        <div class="member-item p-2 ${hoverColor} rounded-md flex items-center" 
+                             data-type="${type}" 
+                             data-profile="${person.name}" 
+                             data-url="${person.url || ''}">
+                            <div class="w-6 h-6 rounded-full ${bgColor} flex items-center justify-center mr-2 ${textColor}">
+                                <i class="${iconClass} text-xs"></i>
+                            </div>
+                            <span class="text-gray-700">${person.name}</span>
+                            ${person.url ? `<span class="ml-2 text-xs ${linkColor} flex items-center">
+                                <i class="fas fa-external-link-alt mr-1"></i>${type === 'instructor' ? '講師資料' : '個人資料'}
+                            </span>` : ''}
+                        </div>
+                    `;
+                });
+            }
+
+            // 渲染子節點
+            if (hasChildren) {
+                Object.values(node.children).forEach(child => {
+                    html += renderNode(child, type, level + 1);
+                });
+            }
+
+            html += `
+                    </div>
+                </div>
+            `;
+
+            return html;
+        }
+
+        // 更新計數器
+        function updateCounts() {
+            document.getElementById('instructorCount').textContent = `${instructorData.length} 人`;
+            document.getElementById('memberCount').textContent = `${memberData.length} 人`;
+        }
+
+        // 綁定事件監聽器
+        function bindEventListeners() {
+            // 處理樹狀結構的展開/收縮
+            document.addEventListener('click', function(e) {
+                const toggle = e.target.closest('.tree-toggle');
+                if (toggle) {
+                    e.stopPropagation();
+                    toggleNode(toggle);
+                    return;
+                }
+
+                // 點擊節點本身也可以展開/收縮
+                const nodeHeader = e.target.closest('.tree-node > div:first-child');
+                if (nodeHeader && !e.target.closest('.member-item')) {
+                    const toggle = nodeHeader.querySelector('.tree-toggle');
+                    toggleNode(toggle);
+                    return;
+                }
+
+                // 點擊人員資料
+                const memberItem = e.target.closest('.member-item');
+                if (memberItem) {
+                    const url = memberItem.getAttribute('data-url');
+                    if (url && url.trim()) {
+                        window.open(url, '_blank');
+                    }
+                }
+            });
+
+            // 全部展開按鈕
+            document.getElementById('expandAll').addEventListener('click', function() {
+                const contents = document.querySelectorAll('.tree-content');
+                contents.forEach(content => {
+                    content.classList.remove('hidden');
+                });
+                
+                const toggles = document.querySelectorAll('.tree-toggle');
+                toggles.forEach(toggle => {
+                    toggle.innerHTML = '<i class="fas fa-minus-square"></i>';
+                });
+            });
+            
+            // 全部收縮按鈕
+            document.getElementById('collapseAll').addEventListener('click', function() {
+                const contents = document.querySelectorAll('.tree-content');
+                contents.forEach(content => {
+                    content.classList.add('hidden');
+                });
+                
+                const toggles = document.querySelectorAll('.tree-toggle');
+                toggles.forEach(toggle => {
+                    toggle.innerHTML = '<i class="fas fa-plus-square"></i>';
+                });
+            });
+
+            // 重新載入按鈕
+            document.getElementById('refreshData').addEventListener('click', function() {
+                loadOrganizationData();
+            });
+
+            // 搜尋功能
+            document.getElementById('search').addEventListener('input', function(e) {
+                const searchTerm = e.target.value.toLowerCase().trim();
+                searchMembers(searchTerm);
+            });
+        }
+
+        // 展開/收縮節點的函數
+        function toggleNode(toggle) {
+            const content = toggle.parentElement.nextElementSibling;
+            content.classList.toggle('hidden');
+            
+            // 更改圖標
+            if (content.classList.contains('hidden')) {
+                toggle.innerHTML = '<i class="fas fa-plus-square"></i>';
+            } else {
+                toggle.innerHTML = '<i class="fas fa-minus-square"></i>';
+            }
+        }
+
+        // 搜尋功能
+        function searchMembers(searchTerm) {
+            const memberItems = document.querySelectorAll('.member-item');
+            
+            memberItems.forEach(item => {
+                const name = item.querySelector('span').textContent.toLowerCase();
+                const matches = name.includes(searchTerm);
+                
+                if (searchTerm === '') {
+                    item.classList.remove('highlight');
+                } else if (matches) {
+                    item.classList.add('highlight');
+                    // 展開包含該項目的所有父級節點
+                    let parent = item.parentElement;
+                    while (parent) {
+                        if (parent.classList.contains('tree-content')) {
+                            parent.classList.remove('hidden');
+                            const toggle = parent.previousElementSibling.querySelector('.tree-toggle');
+                            if (toggle) {
+                                toggle.innerHTML = '<i class="fas fa-minus-square"></i>';
+                            }
+                        }
+                        parent = parent.parentElement;
+                    }
+                } else {
+                    item.classList.remove('highlight');
+                }
+            });
+        }
+
+        // 頁面載入完成後初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            bindEventListeners();
+            loadOrganizationData();
+        });
+    </script>
+</body>
+</html>
