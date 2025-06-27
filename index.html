@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>扶輪社組織結構</title>
+    <title>扶輪社組織結構 - 方案二</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -370,30 +370,83 @@
         // 載入CSV資料
         async function loadOrganizationData() {
             showLoading();
+            console.log('開始載入資料...');
+            console.log('CSV網址:', CSV_URL);
+            
             try {
-                const response = await fetch(CSV_URL);
+                // 添加時間戳避免快取問題
+                const timestamp = new Date().getTime();
+                const urlWithTimestamp = `${CSV_URL}&_t=${timestamp}`;
+                console.log('請求網址:', urlWithTimestamp);
+                
+                const response = await fetch(urlWithTimestamp, {
+                    method: 'GET',
+                    mode: 'cors',
+                    cache: 'no-cache'
+                });
+                
+                console.log('Response status:', response.status);
+                console.log('Response headers:', response.headers);
+                
                 if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
                 }
                 
                 const csvText = await response.text();
+                console.log('CSV檔案大小:', csvText.length, '字元');
+                console.log('CSV前200字元:', csvText.substring(0, 200));
+                
+                // 檢查是否為空
+                if (!csvText.trim()) {
+                    throw new Error('CSV檔案為空');
+                }
                 
                 // 解析 CSV
+                console.log('開始解析CSV...');
                 const parsed = Papa.parse(csvText, {
                     header: true,
                     skipEmptyLines: true,
-                    delimiter: ','
+                    delimiter: ',',
+                    encoding: 'UTF-8'
                 });
+
+                console.log('Papa Parse 結果:', parsed);
+                console.log('解析的資料筆數:', parsed.data.length);
+                console.log('欄位名稱:', Object.keys(parsed.data[0] || {}));
+                console.log('前3筆資料:', parsed.data.slice(0, 3));
 
                 if (parsed.errors.length > 0) {
                     console.warn('CSV 解析警告:', parsed.errors);
+                    // 如果有嚴重錯誤才拋出異常
+                    const fatalErrors = parsed.errors.filter(err => err.type === 'Delimiter');
+                    if (fatalErrors.length > 0) {
+                        throw new Error(`CSV 格式錯誤: ${fatalErrors[0].message}`);
+                    }
                 }
 
-                organizationData = parsed.data.filter(row => row.類型 && row.姓名);
+                organizationData = parsed.data.filter(row => {
+                    // 更寬鬆的過濾條件，支援各種可能的欄位名稱
+                    const hasType = row && (row['類型'] || row['类型'] || row.類型);
+                    const hasName = row && (row['姓名'] || row['姓名'] || row.姓名);
+                    return hasType && hasName;
+                });
                 
-                // 分類資料
-                instructorData = organizationData.filter(row => row.類型 === '講師');
-                memberData = organizationData.filter(row => row.類型 === '社員');
+                console.log('過濾後的資料筆數:', organizationData.length);
+                
+                if (organizationData.length === 0) {
+                    throw new Error('沒有找到有效的資料，請檢查CSV格式');
+                }
+                
+                // 分類資料 - 處理可能的欄位名稱變異
+                instructorData = organizationData.filter(row => {
+                    const type = row['類型'] || row['类型'] || row.類型 || '';
+                    return type === '講師' || type === '讲师';
+                });
+                
+                memberData = organizationData.filter(row => {
+                    const type = row['類型'] || row['类型'] || row.類型 || '';
+                    return type === '社員' || type === '社员' || type === '會員' || type === '会员';
+                });
 
                 console.log('載入資料:', {
                     總計: organizationData.length,
