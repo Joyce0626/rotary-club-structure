@@ -738,35 +738,82 @@
             }
         }
 
-        // 搜尋功能
-        function searchMembers(searchTerm) {
-            const memberItems = document.querySelectorAll('.member-item');
-            
-            memberItems.forEach(item => {
-                const name = item.querySelector('span').textContent.toLowerCase();
-                const matches = name.includes(searchTerm);
-                
-                if (searchTerm === '') {
-                    item.classList.remove('highlight');
-                } else if (matches) {
-                    item.classList.add('highlight');
-                    // 展開包含該項目的所有父級節點
-                    let parent = item.parentElement;
-                    while (parent) {
-                        if (parent.classList.contains('tree-content')) {
-                            parent.classList.remove('hidden');
-                            const toggle = parent.previousElementSibling.querySelector('.tree-toggle');
-                            if (toggle) {
-                                toggle.innerHTML = '<i class="fas fa-minus-square"></i>';
-                            }
-                        }
-                        parent = parent.parentElement;
-                    }
-                } else {
-                    item.classList.remove('highlight');
-                }
-            });
+// 搜尋功能（增強版：支援搜尋人名和扶輪社名）
+function searchMembers(searchTerm) {
+    // 移除所有高亮
+    const allHighlights = document.querySelectorAll('.highlight');
+    allHighlights.forEach(el => el.classList.remove('highlight'));
+    
+    // 如果搜尋字串為空，不做任何處理
+    if (searchTerm === '') {
+        return;
+    }
+    
+    let foundCount = 0;
+    
+    // 1. 搜尋人員名稱
+    const memberItems = document.querySelectorAll('.member-item');
+    memberItems.forEach(item => {
+        const nameElement = item.querySelector('span');
+        if (nameElement) {
+            const name = nameElement.textContent.toLowerCase();
+            if (name.includes(searchTerm)) {
+                item.classList.add('highlight');
+                foundCount++;
+                expandParentNodes(item);
+            }
         }
+    });
+    
+    // 2. 搜尋層級節點（扶輪社名稱等）
+    const nodeLabels = document.querySelectorAll('.node-label');
+    nodeLabels.forEach(label => {
+        const nodeName = label.textContent.toLowerCase();
+        if (nodeName.includes(searchTerm)) {
+            // 高亮該節點
+            const nodeHeader = label.closest('.tree-node > div:first-child');
+            if (nodeHeader) {
+                nodeHeader.classList.add('highlight');
+                foundCount++;
+                
+                // 展開該節點
+                const content = nodeHeader.nextElementSibling;
+                if (content && content.classList.contains('tree-content')) {
+                    content.classList.remove('hidden');
+                    const toggle = nodeHeader.querySelector('.tree-toggle');
+                    if (toggle) {
+                        toggle.innerHTML = '<i class="fas fa-minus-square"></i>';
+                    }
+                }
+                
+                // 展開所有父級節點
+                expandParentNodes(nodeHeader);
+            }
+        }
+    });
+    
+    // 顯示搜尋結果訊息
+    if (foundCount > 0) {
+        showStatus(`找到 ${foundCount} 筆符合「${searchTerm}」的結果`);
+    } else {
+        showStatus(`沒有找到符合「${searchTerm}」的結果`, 'error');
+    }
+}
+
+// 展開所有父級節點的輔助函數
+function expandParentNodes(element) {
+    let parent = element.parentElement;
+    while (parent) {
+        if (parent.classList.contains('tree-content')) {
+            parent.classList.remove('hidden');
+            const toggle = parent.previousElementSibling?.querySelector('.tree-toggle');
+            if (toggle) {
+                toggle.innerHTML = '<i class="fas fa-minus-square"></i>';
+            }
+        }
+        parent = parent.parentElement;
+    }
+}
 
         // 頁面載入完成後初始化
         document.addEventListener('DOMContentLoaded', function() {
